@@ -1,0 +1,62 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  workflow_call:
+    inputs:
+      project:
+        required: true
+        type: string
+        description: "Cloudflare Pages project name"
+      directory:
+        required: true
+        type: string
+        description: "Directory containing the built site to deploy, e.g. dist or out"
+      build-command:
+        type: string
+        default: ""
+        description: "Optional build command to run before deploying, e.g. npm run build"
+      vault_addr:
+        required: true
+        type: string
+      vault_role:
+        required: true
+        type: string
+
+jobs:
+  vault:
+    uses: nwilson5/cicd/.github/workflows/vault-auth.yml@main
+    with:
+      vault_addr: ${{ inputs.vault_addr }}
+      vault_role: ${{ inputs.vault_role }}
+      # Read the Cloudflare API token from Vault
+      secrets: "secret/data/infra/cloudflare#api_token | CLOUDFLARE_API_TOKEN"
+
+  deploy:
+    needs: vault
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ needs.vault.outputs.vault_token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        if: inputs.build-command != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        if: inputs.build-command != ''
+        run: npm ci
+
+      - name: Build
+        if: inputs.build-command != ''
+        run: ${{ inputs.build-command }}
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ needs.vault.outputs.vault_token }}
+          command: pages deploy ${{ inputs.directory }} --project-name=${{ inputs.project }}

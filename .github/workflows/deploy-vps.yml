@@ -1,0 +1,64 @@
+name: Deploy to VPS
+
+on:
+  workflow_call:
+    inputs:
+      project:
+        required: true
+        type: string
+        description: "Project name — used to find the compose file at /opt/<project>/docker-compose.yml on the VPS"
+      image-tag:
+        required: true
+        type: string
+        description: "Full image reference to deploy, e.g. ghcr.io/nwilson5/my-app:a1b2c3d"
+      vault_addr:
+        required: true
+        type: string
+      vault_role:
+        required: true
+        type: string
+        description: "Vault JWT role for this project, e.g. project-my-app"
+    secrets:
+      VPS_HOST:
+        required: true
+      VPS_SSH_KEY:
+        required: true
+
+jobs:
+  vault:
+    uses: nwilson5/cicd/.github/workflows/vault-auth.yml@main
+    with:
+      vault_addr: ${{ inputs.vault_addr }}
+      vault_role: ${{ inputs.vault_role }}
+      # Read any runtime secrets the compose file needs at deploy time.
+      # Add project-specific paths here or let the container read from Vault at startup.
+      secrets: ""
+
+  deploy:
+    needs: vault
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          VAULT_TOKEN: ${{ needs.vault.outputs.vault_token }}
+          VAULT_ADDR: ${{ inputs.vault_addr }}
+          IMAGE_TAG: ${{ inputs.image-tag }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: deploy
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: VAULT_TOKEN,VAULT_ADDR,IMAGE_TAG
+          script: |
+            set -euo pipefail
+            PROJECT_DIR=/opt/${{ inputs.project }}
+
+            # Pull the new image
+            docker pull "$IMAGE_TAG"
+
+            # Rolling update — zero downtime if health checks are configured
+            IMAGE_TAG="$IMAGE_TAG" docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d --remove-orphans
+
+            # Wait for health checks to pass
+            docker compose -f "$PROJECT_DIR/docker-compose.yml" ps

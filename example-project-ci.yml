@@ -1,0 +1,66 @@
+# Example: how a project repo's .github/workflows/ci.yml uses the shared templates.
+# Copy this to <project-repo>/.github/workflows/ci.yml and adjust inputs.
+#
+# Required GitHub secrets in the project repo:
+#   VAULT_ADDR  — https://vault.example.com
+#   VPS_HOST    — VPS IP or hostname
+#   VPS_SSH_KEY — private key for the deploy user
+
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    uses: nwilson5/cicd/.github/workflows/validate.yml@main
+
+  build:
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    uses: nwilson5/cicd/.github/workflows/docker-build.yml@main
+    with:
+      image: ghcr.io/nwilson5/my-app   # change to your image name
+
+  deploy:
+    needs: build
+    uses: nwilson5/cicd/.github/workflows/deploy-vps.yml@main
+    with:
+      project: my-app                   # matches /opt/my-app/ on the VPS
+      image-tag: ${{ needs.build.outputs.image-tag }}
+      vault_addr: ${{ secrets.VAULT_ADDR }}
+      vault_role: project-my-app        # must exist in Vault JWT auth
+    secrets:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+
+# --- Cloudflare Worker variant (swap deploy job for this) ---
+# deploy:
+#   needs: validate
+#   uses: nwilson5/cicd/.github/workflows/deploy-cloudflare-worker.yml@main
+#   with:
+#     worker-name: my-worker
+#     vault_addr: ${{ secrets.VAULT_ADDR }}
+#     vault_role: project-my-worker
+
+# --- Cloudflare Pages variant ---
+# deploy:
+#   needs: validate
+#   uses: nwilson5/cicd/.github/workflows/deploy-cloudflare-pages.yml@main
+#   with:
+#     project: my-site
+#     directory: dist
+#     build-command: npm run build
+#     vault_addr: ${{ secrets.VAULT_ADDR }}
+#     vault_role: project-my-site
+
+# --- AWS Lambda variant ---
+# deploy:
+#   needs: validate
+#   uses: nwilson5/cicd/.github/workflows/deploy-aws-lambda.yml@main
+#   with:
+#     function-name: my-function
+#     vault_addr: ${{ secrets.VAULT_ADDR }}
+#     vault_role: project-my-function

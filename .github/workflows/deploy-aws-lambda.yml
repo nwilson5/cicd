@@ -1,0 +1,87 @@
+name: Deploy AWS Lambda
+
+on:
+  workflow_call:
+    inputs:
+      function-name:
+        required: true
+        type: string
+        description: "Lambda function name"
+      region:
+        type: string
+        default: "us-east-1"
+      runtime:
+        type: string
+        default: "python3.12"
+        description: "Lambda runtime identifier, e.g. python3.12, nodejs20.x, provided.al2"
+      handler:
+        type: string
+        default: "handler.lambda_handler"
+        description: "Entry point in the format file.function"
+      source-directory:
+        type: string
+        default: "."
+        description: "Directory to zip and upload"
+      vault_addr:
+        required: true
+        type: string
+      vault_role:
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read AWS credentials from Vault
+        id: vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ inputs.vault_addr }}
+          method: jwt
+          role: ${{ inputs.vault_role }}
+          jwtGithubAudience: ${{ inputs.vault_addr }}
+          # AWS credentials stored at secret/infra/aws in Vault
+          secrets: |
+            secret/data/infra/aws access_key_id | AWS_ACCESS_KEY_ID ;
+            secret/data/infra/aws secret_access_key | AWS_SECRET_ACCESS_KEY
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Package Lambda
+        run: |
+          cd ${{ inputs.source-directory }}
+          # Install dependencies if present
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt -t .
+          elif [ -f package.json ]; then
+            npm ci --omit=dev
+          fi
+          zip -r /tmp/lambda.zip . -x "*.git*" -x "*__pycache__*" -x "*.pyc"
+
+      - name: Deploy to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ inputs.function-name }} \
+            --zip-file fileb:///tmp/lambda.zip \
+            --region ${{ inputs.region }}
+
+          # Wait for update to complete before updating config
+          aws lambda wait function-updated \
+            --function-name ${{ inputs.function-name }}
+
+          aws lambda update-function-configuration \
+            --function-name ${{ inputs.function-name }} \
+            --runtime ${{ inputs.runtime }} \
+            --handler ${{ inputs.handler }}

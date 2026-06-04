@@ -1,0 +1,49 @@
+name: Vault Auth
+
+on:
+  workflow_call:
+    inputs:
+      vault_addr:
+        required: true
+        type: string
+        description: "Vault URL, e.g. https://vault.example.com"
+      vault_role:
+        required: true
+        type: string
+        description: "Vault JWT role bound to the calling repo, e.g. project-my-app"
+      secrets:
+        required: false
+        type: string
+        description: |
+          Newline-separated secrets to read and export as env vars.
+          Format: secret/data/path#key | ENV_VAR_NAME
+          Example: secret/data/projects/my-app/env#DATABASE_URL | DATABASE_URL
+    outputs:
+      vault_token:
+        description: "Short-lived Vault token scoped to the project policy (15m TTL)"
+        value: ${{ jobs.auth.outputs.vault_token }}
+
+jobs:
+  auth:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # required to request the GitHub OIDC JWT
+      contents: read
+    outputs:
+      vault_token: ${{ steps.export.outputs.vault_token }}
+    steps:
+      - name: Authenticate to Vault via GitHub OIDC
+        id: vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ inputs.vault_addr }}
+          method: jwt
+          role: ${{ inputs.vault_role }}
+          # audience must match the bound_audiences in your Vault JWT role
+          jwtGithubAudience: ${{ inputs.vault_addr }}
+          exportToken: true
+          secrets: ${{ inputs.secrets }}
+
+      - name: Export Vault token as masked output
+        id: export
+        run: echo "vault_token=$VAULT_TOKEN" >> $GITHUB_OUTPUT

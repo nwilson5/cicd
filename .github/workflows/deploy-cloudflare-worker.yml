@@ -1,0 +1,49 @@
+name: Deploy Cloudflare Worker
+
+on:
+  workflow_call:
+    inputs:
+      worker-name:
+        required: true
+        type: string
+        description: "Worker name as defined in wrangler.toml"
+      environment:
+        type: string
+        default: "production"
+        description: "Wrangler environment to deploy to"
+      vault_addr:
+        required: true
+        type: string
+      vault_role:
+        required: true
+        type: string
+
+jobs:
+  vault:
+    uses: nwilson5/cicd/.github/workflows/vault-auth.yml@main
+    with:
+      vault_addr: ${{ inputs.vault_addr }}
+      vault_role: ${{ inputs.vault_role }}
+      secrets: "secret/data/infra/cloudflare#api_token | CLOUDFLARE_API_TOKEN"
+
+  deploy:
+    needs: vault
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ needs.vault.outputs.vault_token }}
+          command: deploy --env ${{ inputs.environment }}
