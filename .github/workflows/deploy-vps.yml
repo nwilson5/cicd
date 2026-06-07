@@ -25,21 +25,24 @@ on:
         required: true
 
 jobs:
-  vault:
-    uses: nwilson5/cicd/.github/workflows/vault-auth.yml@main
-    with:
-      vault_addr: ${{ inputs.vault_addr }}
-      vault_role: ${{ inputs.vault_role }}
-      # Read any runtime secrets the compose file needs at deploy time.
-      # Add project-specific paths here or let the container read from Vault at startup.
-      secrets: ""
-
   deploy:
-    needs: vault
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
+
+      - name: Authenticate to Vault
+        id: vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ inputs.vault_addr }}
+          method: jwt
+          role: ${{ inputs.vault_role }}
+          jwtGithubAudience: ${{ inputs.vault_addr }}
+          exportToken: true
 
       - name: Copy compose file to VPS
         uses: appleboy/scp-action@v0.1.7
@@ -61,7 +64,7 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.4
         env:
-          VAULT_TOKEN: ${{ needs.vault.outputs.vault_token }}
+          VAULT_TOKEN: ${{ env.VAULT_TOKEN }}
           VAULT_ADDR: ${{ inputs.vault_addr }}
           IMAGE_TAG: ${{ inputs.image-tag }}
         with:
