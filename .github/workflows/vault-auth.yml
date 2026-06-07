@@ -42,8 +42,12 @@ jobs:
           # audience must match the bound_audiences in your Vault JWT role
           jwtGithubAudience: ${{ inputs.vault_addr }}
           exportToken: true
+          outputToken: true
           secrets: ${{ inputs.secrets }}
 
       - name: Export Vault token as masked output
         id: export
-        run: echo "vault_token=$VAULT_TOKEN" >> $GITHUB_OUTPUT
+        run: |
+          TOKEN="${{ steps.vault.outputs.vault_token }}"
+          if [ -z "$TOKEN" ]; then TOKEN="$VAULT_TOKEN"; fi
+          echo "vault_token=$TOKEN" >> $GITHUB_OUTPUT
