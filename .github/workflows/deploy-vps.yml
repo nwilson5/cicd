@@ -78,9 +78,9 @@ jobs:
             PROJECT_DIR="$HOME/projects/${{ inputs.project }}"
             mkdir -p "$PROJECT_DIR"
 
-            # Write .env from Vault
+            # Write .env from Vault (values quoted, newlines escaped for multiline secrets)
             vault kv get -format=json "secret/projects/${{ inputs.project }}/env" \
-              | jq -r '.data.data | to_entries[] | "\(.key)=\(.value)"' \
+              | jq -r '.data.data | to_entries[] | "\(.key)=\"\(.value | gsub("\n";"\\n"))\"" ' \
               > "$PROJECT_DIR/.env"
             chmod 600 "$PROJECT_DIR/.env"
 
