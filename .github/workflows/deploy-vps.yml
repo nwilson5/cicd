@@ -43,8 +43,8 @@ jobs:
         run: |
           host=$(echo "${{ secrets.VPS_HOST }}" | tr -d '[:space:]')
           echo "Host: ${#host} chars, ends with: ${host: -10}"
-          nslookup "$host" && echo "DNS OK" || echo "DNS FAILED"
-          nc -zw5 "$host" 2222 && echo "Port 2222 open" || echo "Port 2222 unreachable"
+          nslookup "$host" && echo "DNS OK" || { echo "DNS FAILED"; exit 1; }
+          nc -zw5 "$host" 2222 && echo "Port 2222 open" || { echo "Port 2222 unreachable"; exit 1; }
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.4
