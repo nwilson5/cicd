@@ -1,10 +1,18 @@
 # Example: how a project repo's .github/workflows/ci.yml uses the shared templates.
 # Copy this to <project-repo>/.github/workflows/ci.yml and adjust inputs.
 #
-# Required GitHub secrets in the project repo:
+# Required GitHub Actions variables in the project repo (Settings > Secrets and variables > Variables):
 #   VAULT_ADDR  — https://vault.example.com
+#
+# Required GitHub secrets in the project repo:
 #   VPS_HOST    — VPS IP or hostname
 #   VPS_SSH_KEY — private key for the deploy user
+#
+# Required Vault setup per project:
+#   - A `ci` JWT role bound to the repo + event_name: pull_request
+#   - A policy granting read on secret/data/<project>/ci
+#   - Secrets stored at secret/<project>/ci
+#   See nwilson5/nwmain platform/ansible/roles/vault_auth for the Ansible tasks that set this up.
 
 name: CI/CD
 
@@ -14,8 +22,30 @@ on:
   pull_request:
 
 jobs:
+  # --- PR checks (runs on every pull request) ---
+
   validate:
     uses: nwilson5/cicd/.github/workflows/validate.yml@main
+
+  # Optional: fetch CI secrets from Vault during PR checks (e.g. for integration tests).
+  # Requires a `ci` Vault JWT role bound to event_name: pull_request for this repo.
+  # pr-secrets:
+  #   if: github.event_name == 'pull_request'
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   steps:
+  #     - uses: hashicorp/vault-action@v3
+  #       with:
+  #         url: ${{ vars.VAULT_ADDR }}
+  #         method: jwt
+  #         role: ci
+  #         jwtGithubAudience: ${{ vars.VAULT_ADDR }}
+  #         secrets: |
+  #           secret/data/my-app/ci some_api_key | SOME_API_KEY
+
+  # --- Deploy (runs on merge to main only) ---
 
   build:
     needs: validate
