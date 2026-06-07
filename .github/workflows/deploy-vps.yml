@@ -47,7 +47,7 @@ jobs:
           nc -zw5 "$host" 2222 && echo "Port 2222 open" || echo "Port 2222 unreachable"
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.2
+        uses: appleboy/ssh-action@v1.2.4
         env:
           VAULT_TOKEN: ${{ needs.vault.outputs.vault_token }}
           VAULT_ADDR: ${{ inputs.vault_addr }}
