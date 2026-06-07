@@ -10,7 +10,7 @@ on:
       environment:
         type: string
         default: "production"
-        description: "Wrangler environment to deploy to"
+        description: "Wrangler environment to deploy to (production or sandbox)"
       vault_addr:
         required: true
         type: string
@@ -19,19 +19,23 @@ on:
         type: string
 
 jobs:
-  vault:
-    uses: nwilson5/cicd/.github/workflows/vault-auth.yml@main
-    with:
-      vault_addr: ${{ inputs.vault_addr }}
-      vault_role: ${{ inputs.vault_role }}
-      secrets: "secret/data/infra/cloudflare#api_token | CLOUDFLARE_API_TOKEN"
-
   deploy:
-    needs: vault
     runs-on: ubuntu-latest
-    environment: production
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
+
+      - name: Authenticate to Vault and fetch Cloudflare token
+        id: vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ inputs.vault_addr }}
+          method: jwt
+          role: ${{ inputs.vault_role }}
+          jwtGithubAudience: ${{ inputs.vault_addr }}
+          secrets: "secret/data/infra/cloudflare#api_token | CLOUDFLARE_API_TOKEN"
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -45,5 +49,5 @@ jobs:
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${{ needs.vault.outputs.vault_token }}
+          apiToken: ${{ env.CLOUDFLARE_API_TOKEN }}
           command: deploy --env ${{ inputs.environment }}

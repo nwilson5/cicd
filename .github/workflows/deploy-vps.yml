@@ -39,6 +39,12 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - name: Verify host reachable
+        run: |
+          host=$(echo "${{ secrets.VPS_HOST }}" | tr -d '[:space:]')
+          echo "Attempting to reach: ${#host} chars, ends with: ${host: -10}"
+          nc -zw5 "$host" 22 && echo "Port 22 open" || echo "Port 22 unreachable"
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         env:
