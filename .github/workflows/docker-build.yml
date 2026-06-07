@@ -28,7 +28,7 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
+      image-tag: ${{ steps.sha-tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -50,6 +50,10 @@ jobs:
           tags: |
             type=sha,prefix=,format=short
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Extract SHA tag
+        id: sha-tag
+        run: echo "tag=${{ inputs.image }}:$(echo '${{ github.sha }}' | cut -c1-7)" >> $GITHUB_OUTPUT
 
       - name: Build and push
         uses: docker/build-push-action@v6
