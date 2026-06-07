@@ -39,6 +39,18 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy compose file to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: deploy
+          port: 2222
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: docker-compose.yml
+          target: /opt/${{ inputs.project }}/
+
       - name: Verify host reachable
         run: |
           host=$(echo "${{ secrets.VPS_HOST }}" | tr -d '[:space:]')
@@ -61,6 +73,7 @@ jobs:
           script: |
             set -euo pipefail
             PROJECT_DIR=/opt/${{ inputs.project }}
+            mkdir -p "$PROJECT_DIR"
 
             # Pull the new image
             docker pull "$IMAGE_TAG"
