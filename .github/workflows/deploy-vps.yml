@@ -84,6 +84,9 @@ jobs:
               > "$PROJECT_DIR/.env"
             chmod 600 "$PROJECT_DIR/.env"
 
+            # Persist IMAGE_TAG so manual docker compose commands work without it set in the shell
+            echo "IMAGE_TAG=\"$IMAGE_TAG\"" >> "$PROJECT_DIR/.env"
+
             # Pull the new image
             docker pull "$IMAGE_TAG"
 
