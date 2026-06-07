@@ -42,11 +42,12 @@ jobs:
       - name: Verify host reachable
         run: |
           host=$(echo "${{ secrets.VPS_HOST }}" | tr -d '[:space:]')
-          echo "Attempting to reach: ${#host} chars, ends with: ${host: -10}"
-          nc -zw5 "$host" 22 && echo "Port 22 open" || echo "Port 22 unreachable"
+          echo "Host: ${#host} chars, ends with: ${host: -10}"
+          nslookup "$host" && echo "DNS OK" || echo "DNS FAILED"
+          nc -zw5 "$host" 2222 && echo "Port 2222 open" || echo "Port 2222 unreachable"
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.2.2
         env:
           VAULT_TOKEN: ${{ needs.vault.outputs.vault_token }}
           VAULT_ADDR: ${{ inputs.vault_addr }}
