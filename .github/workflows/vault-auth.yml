@@ -16,7 +16,7 @@ on:
         type: string
         description: |
           Newline-separated secrets to read and export as env vars.
-          Format: secret/data/path#key | ENV_VAR_NAME
+          Format: secret/data/path key | ENV_VAR_NAME
           Example: secret/data/projects/my-app/env#DATABASE_URL | DATABASE_URL
     outputs:
       vault_token:

@@ -49,8 +49,8 @@ jobs:
           jwtGithubAudience: ${{ inputs.vault_addr }}
           # AWS credentials stored at secret/infra/aws in Vault
           secrets: |
-            secret/infra/aws access_key_id | AWS_ACCESS_KEY_ID ;
-            secret/infra/aws secret_access_key | AWS_SECRET_ACCESS_KEY
+            secret/data/infra/aws access_key_id | AWS_ACCESS_KEY_ID ;
+            secret/data/infra/aws secret_access_key | AWS_SECRET_ACCESS_KEY
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
