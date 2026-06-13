@@ -9,8 +9,8 @@ on:
         description: "Worker name as defined in wrangler.toml"
       environment:
         type: string
-        default: "production"
-        description: "Wrangler environment to deploy to (production or sandbox)"
+        default: ""
+        description: "Wrangler environment to deploy to (e.g. sandbox). Leave empty to deploy the default environment."
       vault_addr:
         required: true
         type: string
@@ -50,4 +50,4 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ env.CLOUDFLARE_API_TOKEN }}
-          command: deploy --env ${{ inputs.environment }}
+          command: deploy${{ inputs.environment != '' && format(' --env {0}', inputs.environment) || '' }}

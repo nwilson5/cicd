@@ -46,7 +46,8 @@ jobs:
         if: steps.detect.outputs.type == 'python'
         run: |
           pip install -e ".[dev]" 2>/dev/null || pip install -r requirements-dev.txt 2>/dev/null || pip install -r requirements.txt
-          python -m ruff check . 2>/dev/null || true
+          python -m ruff check .
+          python -m ruff format --check .
           python -m pytest --tb=short
 
       - name: Set up Node
