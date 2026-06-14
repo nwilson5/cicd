@@ -21,6 +21,9 @@ on:
         description: "Full image reference with short SHA tag, e.g. ghcr.io/nwilson5/my-app:a1b2c3d"
         value: ${{ jobs.build.outputs.image-tag }}
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build:
     runs-on: ubuntu-latest

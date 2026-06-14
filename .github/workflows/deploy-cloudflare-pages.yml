@@ -22,6 +22,9 @@ on:
         required: true
         type: string
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   vault:
     uses: nwilson5/cicd/.github/workflows/vault-auth.yml@main

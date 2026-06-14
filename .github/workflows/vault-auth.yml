@@ -23,6 +23,9 @@ on:
         description: "Short-lived Vault token scoped to the project policy (15m TTL)"
         value: ${{ jobs.auth.outputs.vault_token }}
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   auth:
     runs-on: ubuntu-latest
