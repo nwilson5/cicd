@@ -18,6 +18,11 @@ on:
         required: true
         type: string
         description: "Vault JWT role for this project, e.g. project-my-app"
+      shared_vault_paths:
+        required: false
+        type: string
+        default: ""
+        description: "Space-separated list of extra Vault KV paths to merge into .env, e.g. 'secret/shared/gemini secret/shared/github'"
     secrets:
       VPS_HOST:
         required: true
@@ -83,6 +88,13 @@ jobs:
               | jq -r '.data.data | to_entries[] | "\(.key)=\"\(.value | gsub("\n";"\\n"))\"" ' \
               > "$PROJECT_DIR/.env"
             chmod 600 "$PROJECT_DIR/.env"
+
+            # Append shared secrets (each path is a separate KV entry)
+            for shared_path in ${{ inputs.shared_vault_paths }}; do
+              vault kv get -format=json "$shared_path" \
+                | jq -r '.data.data | to_entries[] | "\(.key)=\"\(.value | gsub("\n";"\\n"))\"" ' \
+                >> "$PROJECT_DIR/.env"
+            done
 
             # Persist IMAGE_TAG so manual docker compose commands work without it set in the shell
             echo "IMAGE_TAG=\"$IMAGE_TAG\"" >> "$PROJECT_DIR/.env"
