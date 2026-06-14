@@ -60,7 +60,7 @@ jobs:
     with:
       project: my-app                   # matches /opt/my-app/ on the VPS
       image-tag: ${{ needs.build.outputs.image-tag }}
-      vault_addr: ${{ secrets.VAULT_ADDR }}
+      vault_addr: ${{ vars.VAULT_ADDR }}
       vault_role: project-my-app        # must exist in Vault JWT auth
     secrets:
       VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -72,7 +72,7 @@ jobs:
 #   uses: nwilson5/cicd/.github/workflows/deploy-cloudflare-worker.yml@main
 #   with:
 #     worker-name: my-worker
-#     vault_addr: ${{ secrets.VAULT_ADDR }}
+#     vault_addr: ${{ vars.VAULT_ADDR }}
 #     vault_role: project-my-worker
 
 # --- Cloudflare Pages variant ---
@@ -83,7 +83,7 @@ jobs:
 #     project: my-site
 #     directory: dist
 #     build-command: npm run build
-#     vault_addr: ${{ secrets.VAULT_ADDR }}
+#     vault_addr: ${{ vars.VAULT_ADDR }}
 #     vault_role: project-my-site
 
 # --- AWS Lambda variant ---
@@ -92,5 +92,5 @@ jobs:
 #   uses: nwilson5/cicd/.github/workflows/deploy-aws-lambda.yml@main
 #   with:
 #     function-name: my-function
-#     vault_addr: ${{ secrets.VAULT_ADDR }}
+#     vault_addr: ${{ vars.VAULT_ADDR }}
 #     vault_role: project-my-function
